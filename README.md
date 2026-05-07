@@ -4,7 +4,7 @@
 <div align="left">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-blue.svg)](https://github.com/the-momentum/open-wearables/issues)
+[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-blue.svg)](https://github.com/windx987/wearable-hub/issues)
 ![Built with: FastAPI + React + Tanstack](https://img.shields.io/badge/Built%20with-FastAPI%20%2B%20React%20%2B%20Tanstack-green.svg)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/qrcfFnNE6H)
 
@@ -66,8 +66,8 @@ Get Open Wearables up and running in minutes.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/the-momentum/open-wearables.git
-   cd open-wearables
+   git clone --recurse-submodules git@github.com:windx987/wearable-hub.git
+   cd wearable-hub
    ```
 
 2. **Configure environment variables:**
@@ -211,7 +211,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details on:
 
 ## Community
 
-- 💬 [GitHub Discussions](https://github.com/the-momentum/open-wearables/discussions) - Questions and ideas
+- 💬 [GitHub Discussions](https://github.com/windx987/wearable-hub/discussions) - Questions and ideas
 
 ---
 
