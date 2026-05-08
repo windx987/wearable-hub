@@ -1,3 +1,6 @@
 [submodule "flutter-open-wearables-sdk"]
 	path = flutter-open-wearables-sdk
 	url = https://github.com/the-momentum/open_wearables_health_sdk
+[submodule "ROOJAIHUB"]
+	path = ROOJAIHUB
+	url = git@github.com:aszxcnm22/ROOJAIHUB.git

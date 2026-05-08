@@ -198,6 +198,20 @@ services:
           path: ./frontend/vite.config.ts
     restart: on-failure
 
+  frontend2:
+    build:
+      context: ./ROOJAIHUB
+      dockerfile: Dockerfile
+    container_name: frontend2__open-wearables
+    image: roojaihub
+    env_file:
+      - ./ROOJAIHUB/.env
+    ports:
+      - "3333:3333"
+    depends_on:
+      - app
+    restart: on-failure
+
 volumes:
   postgres_data:
   redis_data:
