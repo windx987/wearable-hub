@@ -57,6 +57,13 @@ downgrade:  ## Revert the last migration
 reset_db:  ## Truncate all tables in the database (WARNING: deletes all data)
 	$(DOCKER_EXEC) uv run python scripts/reset_database.py
 
+seed_questionnaire:  ## Seed 90 days of questionnaire history for all scenarios. Requires USER=email. Optional: DAYS=N.
+	@if [ -z "$(USER)" ]; then \
+		echo "Usage: make seed_questionnaire USER=email [DAYS=90]"; \
+		exit 1; \
+	fi
+	$(DOCKER_EXEC) uv run python scripts/seed_questionnaire.py --user $(USER) --days $(or $(DAYS),90)
+
 scenario:  ## Seed signals to trigger a specific questionnaire scenario. Requires USER=email SCENARIO=name.
 	@if [ -z "$(USER)" ] || [ -z "$(SCENARIO)" ]; then \
 		echo "Usage: make scenario USER=email SCENARIO=hrv_drop|elevated_arousal|poor_sleep|post_workout|streak_risk|rops|baseline"; \
