@@ -271,6 +271,35 @@ def seed_baseline(db, user_id, ds_id, today: date):
         ))
 
 
+def _reset_scenario_data(db, user_id, ds_id, today: date):
+    """Wipe all previously seeded scenario data so each run starts clean."""
+    # All DataPointSeries from scenario_seed datasource
+    db.execute(delete(DataPointSeries).where(DataPointSeries.data_source_id == ds_id))
+
+    # Audio summary for today
+    db.execute(delete(AudioDailySummary).where(
+        AudioDailySummary.user_id == user_id,
+        AudioDailySummary.date == today,
+    ))
+
+    # Sleep + workout event records from scenario_seed datasource
+    event_ids = db.execute(
+        select(EventRecord.id).where(EventRecord.data_source_id == ds_id)
+    ).scalars().all()
+    for eid in event_ids:
+        db.execute(delete(SleepDetails).where(SleepDetails.record_id == eid))
+        db.execute(delete(WorkoutDetails).where(WorkoutDetails.record_id == eid))
+        db.execute(delete(EventRecord).where(EventRecord.id == eid))
+
+    # Questionnaire stubs seeded by previous scenario runs (empty answers)
+    db.execute(delete(QuestionnaireResponse).where(
+        QuestionnaireResponse.user_id == user_id,
+        QuestionnaireResponse.answers == [],
+    ))
+
+    db.flush()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--user", metavar="EMAIL", required=True)
@@ -285,7 +314,11 @@ def main():
             sys.exit(f"User not found: {args.user}")
 
         ds = _get_or_create_datasource(db, user.id)
-        print(f"Seeding scenario '{args.scenario}' for {args.user} on {today}")
+
+        print(f"Resetting previous scenario data for {args.user}…")
+        _reset_scenario_data(db, user.id, ds.id, today)
+
+        print(f"Seeding scenario '{args.scenario}'…")
 
         if args.scenario == "hrv_drop":
             seed_hrv_drop(db, user.id, ds.id, today)
