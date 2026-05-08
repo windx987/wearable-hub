@@ -120,6 +120,11 @@ export const queryKeys = {
       [...queryKeys.chat.all(userId), 'history'] as const,
   },
 
+  agent: {
+    all: (userId: string) => ['agent', userId] as const,
+    log: (userId: string) => [...queryKeys.agent.all(userId), 'log'] as const,
+  },
+
   oauthProviders: {
     all: ['oauthProviders'] as const,
     list: (cloudOnly?: boolean, enabledOnly?: boolean) =>

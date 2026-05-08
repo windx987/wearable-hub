@@ -26,6 +26,7 @@ type OneToOne[T] = T
 json_binary = Annotated[list[dict[str, Any]], mapped_column(JSONB)]
 email = Annotated[str, mapped_column(String)]
 str_10 = Annotated[str, mapped_column(String(10))]
+str_16 = Annotated[str, mapped_column(String(16))]
 str_32 = Annotated[str, mapped_column(String(32))]
 str_50 = Annotated[str, mapped_column(String(50))]
 str_64 = Annotated[str, mapped_column(String(64))]

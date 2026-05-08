@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     admin_email: str = "admin@admin.com"
     admin_password: SecretStr = SecretStr("your-secure-password")
 
+    # OPENAI
+    openai_api_key: SecretStr | None = None
+    openai_model: str = "gpt-4o-mini"
+
     # Time to live for sleep state in Redis
     redis_sleep_ttl_seconds: int = 24 * 3600  # 24 hours
 

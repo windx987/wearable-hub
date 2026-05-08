@@ -140,9 +140,15 @@ def create_celery() -> Celery:
         },
         "renew-oura-webhooks-monthly": {
             "task": "app.integrations.celery.tasks.renew_oura_webhooks_task.renew_oura_webhooks",
-            "schedule": crontab(day_of_month=1, hour=0, minute=0),  # 1st of each month at 00:00 UTC
+            "schedule": crontab(day_of_month=1, hour=0, minute=0),
             "args": (),
             "kwargs": {},
+        },
+        "run-roojai-agent-daily": {
+            "task": "app.integrations.celery.tasks.run_agent_task.run_agent_for_all_users",
+            "schedule": crontab(hour=0, minute=0),  # 00:00 UTC = 07:00 ICT
+            "args": (),
+            "kwargs": {"trigger": "daily_cron"},
         },
     }
 

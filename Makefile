@@ -37,6 +37,13 @@ seed:  ## Seed sample data (test users and activity data)
 	$(DOCKER_EXEC) uv sync --group dev
 	$(DOCKER_EXEC) uv run python scripts/init/seed_activity_data.py
 
+stream:  ## Stream live wearable data for a specific user (runs until Ctrl+C). Requires USER=email. Optional: SPEED=N (default 60), START=YYYY-MM-DD (default Jan 1 this year).
+	@if [ -z "$(USER)" ]; then \
+		echo "Error: You must provide a target user using 'USER=email'"; \
+		exit 1; \
+	fi
+	$(DOCKER_EXEC) uv run python scripts/stream_data.py --user $(USER) --speed $(or $(SPEED),60) $(if $(START),--start $(START),)
+
 create_migration:  ## Create a new migration. Use 'make create_migration m="Description of the change"'
 	@if [ -z "$(m)" ]; then \
 		echo "Error: You must provide a migration description using 'm=\"Description\"'"; \

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useHealthScores } from '@/hooks/api/use-health';
 import { useDateRange } from '@/hooks/use-date-range';
+import { AgentReportSection } from './agent-report-section';
 import type { DateRangeValue } from '@/components/ui/date-range-selector';
 import { SourceBadge } from '@/components/common/source-badge';
 import { SectionHeader } from '@/components/common/section-header';
@@ -485,6 +486,9 @@ export function ScoresSection({
 
   return (
     <div className="space-y-6">
+      {/* AI Agent Report */}
+      <AgentReportSection userId={userId} />
+
       {/* Summary + Chart Section */}
       <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl overflow-hidden">
         <SectionHeader

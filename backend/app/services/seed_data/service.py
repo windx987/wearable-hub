@@ -98,9 +98,7 @@ class SeedDataService:
         identity_fake = Faker()
         identity_fake.seed_instance(int.from_bytes(os.urandom(8)))
 
-        # Use a fixed anchor date so the same seed always produces identical
-        # data regardless of when the generator is run.
-        now = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
 
         personal_record_repo = CrudRepository(PersonalRecord)
         event_detail_repo = EventRecordDetailRepository(EventRecordDetail)

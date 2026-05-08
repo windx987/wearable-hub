@@ -1,4 +1,9 @@
+from .agent_run_log import AgentRunLog
 from .api_key import ApiKey
+from .daily_score import DailyScore
+from .questionnaire_response import QuestionnaireResponse
+from .audio_daily_summary import AudioDailySummary
+from .audio_sample import AudioSample
 from .application import Application
 from .archival_setting import ArchivalSetting
 from .data_point_series import DataPointSeries
@@ -23,6 +28,8 @@ from .workout_details import WorkoutDetails
 
 __all__ = [
     "ApiKey",
+    "AudioDailySummary",
+    "AudioSample",
     "Application",
     "ArchivalSetting",
     "Developer",
@@ -43,5 +50,8 @@ __all__ = [
     "PersonalRecord",
     "DataPointSeries",
     "SeriesTypeDefinition",
+    "AgentRunLog",
+    "DailyScore",
     "HealthScore",
+    "QuestionnaireResponse",
 ]

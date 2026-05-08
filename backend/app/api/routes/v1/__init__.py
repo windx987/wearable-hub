@@ -1,6 +1,11 @@
 from fastapi import APIRouter
 
 from .api_keys import router as api_keys_router
+from .audio import router as audio_router
+from .questionnaire import router as questionnaire_router
+from .agent import router as agent_router
+from .ai import router as ai_router
+from .scores import router as scores_router
 from .applications import router as applications_router
 from .archival import router as archival_router
 from .auth import router as auth_router
@@ -44,6 +49,11 @@ v1_router.include_router(oauth_router, prefix="/oauth")
 v1_router.include_router(sync_data_router, prefix="/providers", tags=["External: Data Sync"])
 v1_router.include_router(vendor_workouts_router, prefix="/providers", tags=["System: Vendor Workouts"])
 v1_router.include_router(import_xml_router, tags=["External: Apple Health Import"])
+v1_router.include_router(audio_router, tags=["External: Audio"])
+v1_router.include_router(questionnaire_router, tags=["External: Questionnaire"])
+v1_router.include_router(scores_router, tags=["External: Scores"])
+v1_router.include_router(agent_router, tags=["External: AI Agent"])
+v1_router.include_router(ai_router, tags=["External: AI Agent"])
 v1_router.include_router(sdk_logs_router, tags=["External: Mobile SDK"])
 v1_router.include_router(sdk_sync_router, tags=["External: Mobile SDK"])
 v1_router.include_router(sdk_token_router, tags=["External: Mobile SDK"])

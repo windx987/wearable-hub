@@ -110,4 +110,8 @@ export const API_ENDPOINTS = {
   webhookEndpointAttempts: (id: string) =>
     `/api/v1/webhooks/endpoints/${id}/attempts`,
   webhookMessages: '/api/v1/webhooks/messages',
+
+  // Agent endpoints
+  agentRun: (userId: string) => `/api/v1/agent/users/${userId}/run`,
+  agentLog: (userId: string) => `/api/v1/agent/users/${userId}/log`,
 } as const;
