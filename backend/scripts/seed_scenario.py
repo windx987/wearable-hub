@@ -76,6 +76,14 @@ def _insert_hrv(db, ds_id, recorded_at: datetime, value: float):
 
 def seed_hrv_drop(db, user_id, ds_id, today: date):
     """30-day baseline ~55ms, today ~28ms (49% below → triggers 15% threshold)."""
+    stdef_id = _hrv_series_id(db)
+    # Clear existing HRV on this datasource to avoid duplicates
+    db.execute(delete(DataPointSeries).where(
+        DataPointSeries.data_source_id == ds_id,
+        DataPointSeries.series_type_definition_id == stdef_id,
+    ))
+    db.flush()
+
     print("  Inserting 30-day HRV baseline (~55ms)…")
     for day_offset in range(30, 0, -1):
         d = today - timedelta(days=day_offset)
@@ -295,7 +303,15 @@ def main():
             seed_baseline(db, user.id, ds.id, today)
 
         db.commit()
-        print(f"Done. Open the questionnaire for {args.user} — scenario '{args.scenario}' should now trigger.")
+        print(f"Done. Scenario '{args.scenario}' seeded.")
+
+        print("Running agent…")
+        try:
+            from app.services.agent_core import agent_core
+            log = agent_core.run(db, user.id, trigger="scenario_seed", target_date=today)
+            print(f"Agent complete — risk={log.risk_level}, actions={[a['type'] for a in log.actions_planned]}")
+        except Exception as exc:
+            print(f"Agent run skipped: {exc}")
 
 
 if __name__ == "__main__":
