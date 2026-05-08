@@ -56,3 +56,10 @@ downgrade:  ## Revert the last migration
 
 reset_db:  ## Truncate all tables in the database (WARNING: deletes all data)
 	$(DOCKER_EXEC) uv run python scripts/reset_database.py
+
+scenario:  ## Seed signals to trigger a specific questionnaire scenario. Requires USER=email SCENARIO=name.
+	@if [ -z "$(USER)" ] || [ -z "$(SCENARIO)" ]; then \
+		echo "Usage: make scenario USER=email SCENARIO=hrv_drop|elevated_arousal|poor_sleep|post_workout|streak_risk|rops|baseline"; \
+		exit 1; \
+	fi
+	$(DOCKER_EXEC) uv run python scripts/seed_scenario.py --user $(USER) --scenario $(SCENARIO)

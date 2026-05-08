@@ -62,7 +62,7 @@ def _had_workout_today(db: Session, user_id: UUID, target_date: date) -> bool:
         .join(DataSource, EventRecord.data_source_id == DataSource.id)
         .where(
             DataSource.user_id == user_id,
-            EventRecord.category == "activity",
+            EventRecord.category == "workout",
             EventRecord.start_datetime >= day_start,
             EventRecord.start_datetime < day_end,
         )
