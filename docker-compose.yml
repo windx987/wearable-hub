@@ -212,6 +212,17 @@ services:
       - app
     restart: on-failure
 
+  cloudflared:
+    container_name: cloudflared__open-wearables
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    environment:
+      - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - app
+      - frontend
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
