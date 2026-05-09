@@ -38,6 +38,7 @@ from app.models.audio_daily_summary import AudioDailySummary
 from app.models.data_point_series import DataPointSeries
 from app.models.data_source import DataSource
 from app.models.event_record import EventRecord
+from app.models.questionnaire_response import QuestionnaireResponse
 from app.models.series_type_definition import SeriesTypeDefinition
 from app.models.sleep_details import SleepDetails
 from app.models.workout_details import WorkoutDetails
@@ -288,6 +289,16 @@ def _generate_workout_session(db, ds_id, sim_date: date) -> str | None:
         return None
 
 
+def _resume_last_rops(db, user_id) -> date | None:
+    """Return the date of the most recent ROPS questionnaire response, or None."""
+    return db.execute(
+        select(QuestionnaireResponse.date)
+        .where(QuestionnaireResponse.user_id == user_id, QuestionnaireResponse.scenario == "rops")
+        .order_by(QuestionnaireResponse.date.desc())
+        .limit(1)
+    ).scalar()
+
+
 def _resume_point(db, ds_id, fallback: datetime) -> datetime:
     """Return the latest recorded_at for this data source, or fallback if none."""
     latest = db.execute(
@@ -306,10 +317,98 @@ def _drift(current: float, lo: float, hi: float, noise: float) -> float:
     return max(lo, min(hi, new))
 
 
-class _UserStream:
-    __slots__ = ("user_id", "email", "ds_id", "series_ids", "sim_now", "last_at", "value", "last_audio_date")
+# ── Questionnaire mock data ───────────────────────────────────────────────────
 
-    def __init__(self, user_id, email: str, ds_id, series_ids: dict[str, int], sim_now: datetime):
+_Q_ANSWERS: dict[str, list[list[dict]]] = {
+    "hrv_drop": [
+        [{"id": "hrv_drop_energy", "answer": "2"}, {"id": "hrv_drop_stress", "answer": "ใช่ มีงานด่วนที่ต้องส่งวันนี้"}, {"id": "hrv_drop_sleep_feel", "answer": "ตื่นมายังรู้สึกง่วงและหนักหัว"}, {"id": "hrv_drop_cause", "answer": "งานและความเครียดสะสม"}],
+        [{"id": "hrv_drop_energy", "answer": "1"}, {"id": "hrv_drop_stress", "answer": "กังวลเรื่องสุขภาพของคนในครอบครัว"}, {"id": "hrv_drop_sleep_feel", "answer": "นอนหลับได้แค่ 4 ชั่วโมง"}, {"id": "hrv_drop_cause", "answer": "ความกังวลและนอนไม่หลับ"}],
+    ],
+    "elevated_arousal": [
+        [{"id": "arousal_situation", "answer": "ใช่ มีการประชุมสำคัญและเส้นตายงาน"}, {"id": "arousal_body", "answer": "หัวใจเต้นเร็ว หายใจตื้น และรู้สึกเกร็งที่ไหล่"}, {"id": "arousal_coping", "answer": "ลองหายใจลึกๆ และฟังเพลงผ่อนคลาย"}],
+        [{"id": "arousal_situation", "answer": "ขัดแย้งกับเพื่อนร่วมงาน"}, {"id": "arousal_body", "answer": "ปวดหัว และมือสั่นเล็กน้อย"}, {"id": "arousal_coping", "answer": "คุยกับเพื่อนสนิทและเดินเล่นพักสมอง"}],
+    ],
+    "poor_sleep": [
+        [{"id": "sleep_quality", "answer": "ยังง่วงและเหนื่อย ไม่สดชื่นเลย"}, {"id": "sleep_disruption", "answer": "ตื่นกลางดึก 2-3 ครั้ง คิดเรื่องงานตลอด"}, {"id": "sleep_plan", "answer": "จะพยายามงีบกลางวัน และเข้านอนเร็วขึ้น"}],
+        [{"id": "sleep_quality", "answer": "ง่วงมาก อยากนอนต่ออีกหลายชั่วโมง"}, {"id": "sleep_disruption", "answer": "ดูหนังดึกเกินไป เลยนอนน้อย"}, {"id": "sleep_plan", "answer": "ตั้งใจเข้านอนก่อน 22.00 คืนนี้"}],
+    ],
+    "post_workout": [
+        [{"id": "workout_feel", "answer": "ดีมาก รู้สึกสดชื่นและมีพลังหลังออกกำลังกาย"}, {"id": "workout_intensity", "answer": "พอดีสำหรับวันนี้ ไม่หนักเกินไป"}, {"id": "workout_recovery", "answer": "กล้ามเนื้อขาล้าเล็กน้อย แต่โดยรวมโอเค"}],
+        [{"id": "workout_feel", "answer": "เหนื่อยมากในช่วงแรก แต่ตอนหลังดีขึ้น"}, {"id": "workout_intensity", "answer": "หนักกว่าปกติ แต่ยังรับได้"}, {"id": "workout_recovery", "answer": "ไหล่และหลังตึงหน่อย จะนวดคืนนี้"}],
+    ],
+    "streak_risk": [
+        [{"id": "streak_motivation", "answer": "รู้สึกขาดแรงจูงใจช่วงนี้ งานยุ่งมาก"}, {"id": "streak_barrier", "answer": "ตารางงานแน่นและเหนื่อยเกินไป"}, {"id": "streak_support", "answer": "อยากได้การแจ้งเตือนเบาๆ"}],
+    ],
+    "rops": [
+        [{"id": "rops_sleep", "answer": "ใช่"}, {"id": "rops_fedup", "answer": "ใช่"}, {"id": "rops_tired", "answer": "ใช่"}, {"id": "rops_mental_help", "answer": "ไม่"}, {"id": "rops_life_stress", "answer": "ใช่"}, {"id": "rops_bmi", "answer": "ไม่"}],
+        [{"id": "rops_sleep", "answer": "ใช่"}, {"id": "rops_fedup", "answer": "ไม่"}, {"id": "rops_tired", "answer": "ใช่"}, {"id": "rops_mental_help", "answer": "ไม่"}, {"id": "rops_life_stress", "answer": "ไม่"}, {"id": "rops_bmi", "answer": "ไม่"}],
+    ],
+    "baseline": [
+        [{"id": "baseline_mood", "answer": "4"}, {"id": "baseline_energy", "answer": "ใช่ มีพลังงานพอสมควร"}, {"id": "baseline_highlight", "answer": "ได้กินอาหารอร่อยและนอนหลับพักผ่อนดี"}],
+        [{"id": "baseline_mood", "answer": "5"}, {"id": "baseline_energy", "answer": "มีพลังงานมาก รู้สึกดีมาก"}, {"id": "baseline_highlight", "answer": "เสร็จงานสำคัญและได้ออกกำลังกายตอนเช้า"}],
+        [{"id": "baseline_mood", "answer": "3"}, {"id": "baseline_energy", "answer": "พอไหว ไม่มากไม่น้อย"}, {"id": "baseline_highlight", "answer": "ได้คุยกับครอบครัว รู้สึกดีขึ้น"}],
+    ],
+}
+
+# Weighted scenario pool — drawn each day (rops handled separately by 30-day gate)
+_Q_SCENARIO_POOL = [
+    ("baseline",         50),
+    ("post_workout",     20),
+    ("poor_sleep",       10),
+    ("elevated_arousal",  8),
+    ("hrv_drop",          7),
+    ("streak_risk",       5),
+]
+_Q_SCENARIOS, _Q_WEIGHTS = zip(*_Q_SCENARIO_POOL)
+
+_ROPS_INTERVAL_DAYS = 30
+
+
+def _generate_questionnaire(db, user_id, sim_date: date, last_rops_date: date | None) -> tuple[str, date | None]:
+    """Insert a questionnaire response for sim_date. Returns (scenario, new_last_rops_date)."""
+    existing = db.execute(
+        select(QuestionnaireResponse.id).where(
+            QuestionnaireResponse.user_id == user_id,
+            QuestionnaireResponse.date == sim_date,
+        )
+    ).scalar_one_or_none()
+    if existing:
+        return "skipped", last_rops_date
+
+    # Gate: trigger ROPS if 30 days elapsed since last ROPS
+    days_since_rops = (sim_date - last_rops_date).days if last_rops_date else 999
+    if days_since_rops >= _ROPS_INTERVAL_DAYS:
+        scenario = "rops"
+        new_last_rops = sim_date
+    else:
+        scenario = random.choices(_Q_SCENARIOS, weights=_Q_WEIGHTS, k=1)[0]  # type: ignore[arg-type]
+        new_last_rops = last_rops_date
+
+    answers = random.choice(_Q_ANSWERS[scenario])
+    context: dict = {"stream_generated": True}
+    if scenario == "rops":
+        yes_ids = {"rops_sleep", "rops_fedup", "rops_tired", "rops_mental_help", "rops_life_stress", "rops_bmi"}
+        score = sum(1 for a in answers if a["id"] in yes_ids and a["answer"] in ("ใช่", "yes", "1"))
+        context["rops_score"] = score
+        context["rops_risk"] = "low" if score <= 2 else ("moderate" if score <= 4 else "high")
+
+    db.add(QuestionnaireResponse(
+        id=uuid4(), user_id=user_id, date=sim_date,
+        scenario=scenario, answers=answers, context_snapshot=context,
+    ))
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        return "skipped", last_rops_date
+
+    return scenario, new_last_rops
+
+
+class _UserStream:
+    __slots__ = ("user_id", "email", "ds_id", "series_ids", "sim_now", "last_at", "value", "last_audio_date", "last_rops_date")
+
+    def __init__(self, user_id, email: str, ds_id, series_ids: dict[str, int], sim_now: datetime, last_rops_date: date | None = None):
         self.user_id = user_id
         self.email = email
         self.ds_id = ds_id
@@ -320,6 +419,7 @@ class _UserStream:
             m["code"]: random.uniform(m["lo"], m["hi"]) for m in METRICS
         }
         self.last_audio_date: date | None = None
+        self.last_rops_date: date | None = last_rops_date
 
 
 def run(speed: float, user_email: str | None, tick_s: float, start: datetime | None) -> None:
@@ -343,9 +443,9 @@ def run(speed: float, user_email: str | None, tick_s: float, start: datetime | N
         streams = []
         for u in users:
             ds = _get_or_create_datasource(db, u.id)
-            # resume from last recorded point unless --start was explicitly given
             user_start = start if start is not None else _resume_point(db, ds.id, fallback)
-            streams.append(_UserStream(u.id, u.email or str(u.id), ds.id, series_ids, user_start))
+            last_rops = _resume_last_rops(db, u.id)
+            streams.append(_UserStream(u.id, u.email or str(u.id), ds.id, series_ids, user_start, last_rops))
 
     sim_now = streams[0].sim_now if len(streams) == 1 else min(s.sim_now for s in streams)
     speed_label = f"{int(speed)}x" if speed >= 1 else f"1/{int(1/speed)}x"
@@ -399,6 +499,11 @@ def run(speed: float, user_email: str | None, tick_s: float, start: datetime | N
                         if wtype:
                             tick_inserts.append(f"workout({prev_day},{wtype})")
                         tick_inserts.append(f"audio_summary({d})")
+                        scenario, stream.last_rops_date = _generate_questionnaire(
+                            db, stream.user_id, prev_day, stream.last_rops_date
+                        )
+                        if scenario != "skipped":
+                            tick_inserts.append(f"checkin({prev_day},{scenario})")
                         stream.last_audio_date = d
                         d += timedelta(days=1)
 
